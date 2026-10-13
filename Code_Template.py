@@ -1,0 +1,350 @@
+import pandas as pd
+import numpy as np
+from bs4 import BeautifulSoup
+import matplotlib.pyplot as plt
+
+class EuropeanFootballAnalysis:
+    def __init__(self, filename = None):
+        self.file = filename
+        
+        # Container for Raw data
+        self.raw_data = None 
+        
+        # Container for cleaned data
+        self.cleaned_data = None
+        
+        
+        # Mapping dictionaries      
+        self.position_map = {
+            'GK': 'Goalkeeper',
+            'DF': 'Defender', 
+            'MF': 'Midfielder',
+            'FW': 'Forward'
+        }
+        
+        self.colors = {
+            'Premier League': '#38003c',
+            'La Liga': '#eda132',
+            'Bundesliga': '#d3010c',
+            'Serie A': '#008fd8',
+            'Ligue 1': '#091c3e'
+        }
+
+        self.team_colors = {
+          # Premier League
+          'Manchester City': '#6CABDD',
+          'Arsenal': '#EF0107',
+          'Liverpool': '#C8102E',
+          'Manchester United': '#DA291C',
+          'Tottenham': '#FFFFFF',
+          'Chelsea': '#034694',
+          'Newcastle United': '#241F20',
+          'Brighton': '#0057B8',
+          'Aston Villa': '#95BFE5',
+          'West Ham': '#7A263A',
+          
+          # La Liga  
+          'Real Madrid': '#FEBE10',
+          'Barcelona': '#A50044',
+          'Atletico Madrid': '#CB3524',
+          'Sevilla': '#FFFFFF',
+          'Real Betis': '#00954C',
+          'Villarreal': '#FFE667',
+          'Real Sociedad': '#00529F',
+          'Athletic Club': '#EE2523',
+          
+          # Serie A
+          'Inter': '#010E80',
+          'Milan': '#FB090B',
+          'Juventus': '#000000',
+          'Napoli': '#12A0D7',
+          'Roma': '#8E1F2F',
+          'Lazio': '#FFFFFF',
+          'Atalanta': '#1D5EA8',
+          'Fiorentina': '#482E92',
+          
+          # Bundesliga
+          'Bayern Munich': '#0066B3',
+          'Dortmund': '#FDE100',
+          'RB Leipzig': '#DD0741',
+          'Leverkusen': '#E32219',
+          'Eintracht Frankfurt': '#E21A23',
+          'Wolfsburg': '#65FF00',
+          'Freiburg': '#E30613',
+          "M'Gladbach": '#000000',
+          
+          # Ligue 1
+          'Paris S-G': '#004170',
+          'Marseille': '#00B9F1',
+          'Lyon': '#D61C28',
+          'Monaco': '#E30613',
+          'Lille': '#E21A23',
+          'Rennes': '#E21A23',
+          'Lens': '#FFDC00',
+          'Nice': '#000000'
+      }
+
+    def scrape(self):
+        """
+        Task 1: Read data from the html file and extraction table.
+        populates self.raw_data as a pandas DataFrame.
+        """
+        # Replace with your code
+        # Task Number 1
+    
+
+        with open(self.file, "r", encoding="utf-8") as football_file:
+            html_content = football_file.read()
+        soup = BeautifulSoup(html_content, "html.parser")
+        table = soup.find("table", id="stats_standard")
+        header_rows = table.find("thead").find_all("tr")
+    
+        columns = []
+        last_header_row = header_rows[-1]
+        for th in last_header_row.find_all("th"):
+            text = th.get_text(strip=True)
+            columns.append(text)
+
+        start = columns.index("CrdR") + 1
+        for i in range(start, len(columns)-1):
+            columns[i] = columns[i] + "/90"
+
+        rows = []
+        for tr in table.find("tbody").find_all("tr"):
+            row_values = []
+            for cell in tr.find_all(["th", "td"]):
+                row_values.append(cell.get_text(strip=True))
+            rows.append(row_values)
+        
+        self.raw_data = pd.DataFrame(rows, columns=columns)
+        return self.raw_data
+
+        
+
+    def clean_data(self):
+        """
+        Task 2 & 3: Clean data.
+        - Remove special characters from data
+        - Convert columns with commas to numeric data
+        - Parse Nation: extract 3-letter code from flag images or text
+        - Parse Position: extract primary position and add a new column to data
+        - Convert Columns to numbers based on the type of data
+        - Populates self.cleaned_data as a pandas DataFrame.
+        """
+        # Task Number 2 and 3
+        df = self.raw_data.copy()
+
+
+        df = df[df["Rk"] !="Rk"]
+        for column in df.columns:
+            df[column] = df[column].str.replace("*","")
+            df[column] = df[column].str.strip()
+
+        df["Min"] = df["Min"].str.replace(",","")
+
+        df = df.replace("", np.nan)
+
+        number_columns = ["Rk", "Age", "Born", "MP", "Starts", "Min", "90s",
+                          "Gls", "Ast", "G+A", "G-PK", "PK", "PKatt", "CrdY", "CrdR",
+                          "Gls/90", "Ast/90", "G+A/90", "G-PK/90", "G+A-PK/90"]
+        for column in number_columns:
+            df[column] = pd.to_numeric(df[column], errors="coerce")
+            df[column] = df[column].fillna(0)
+        df["min"] = df["Min"].astype(int)
+        df = df.fillna("Unknown")
+
+        df["Nations"] = df["Nation"].str[-3:]
+
+        df["League"] = df["Comp"].str.lstrip("abcdefghijklmnopqrstuvwxyz")
+
+        df["Primary_Position"] = df["Pos"].apply(self._extract_primary_position)
+
+        self.cleaned_data = df
+        return self.cleaned_data        
+
+        
+
+
+    def _extract_primary_position(self, pos_str):
+        """
+        Helper for Task 3: Extract primary position from codes like 'FWMF' or 'DF,MF'
+        """
+        # Task Number 3
+        if type(pos_str) != str:
+            return "unknown"
+        
+        pos_str = pos_str.strip().upper()
+
+        if "," in pos_str:
+            first = pos_str.split(",")[0].strip()
+        else:
+            first = pos_str[:2]
+        if first in ["GK", "DF", "MF", "FW"]:
+            return first
+        return "Unknown"
+
+        
+        
+
+    def add_derived_metrics(self):
+        """
+        Task 4: Add Minutes_per_Game, and Goal_Contribution_Rate. The derived metrics should be added as new columns to self.cleaned_data.
+        """
+        # Task Number 4
+        df = self.cleaned_data
+        df["Mins_Per_Game"] = df["Min"]/df["MP"]
+        df["Goal_Contr_Rate"] = df["G+A"] / df["90s"]
+        df = df.replace([np.inf, -np.inf], np.nan)
+        df['Mins_Per_Game'] = df['Mins_Per_Game'].fillna(0)
+        df["Goal_Contr_Rate"]= df["Goal_Contr_Rate"].fillna(0)
+
+        self.cleaned_data = df
+        return self.cleaned_data
+
+    def find_top_scorer(self):
+        """
+        Task 5: Find the player(s) with the highest number of goals. Return player name, team, goals, league.
+        """
+        # Replace with your code
+        pass
+
+    def find_playmaker(self):
+        """
+        Task 6: Find the player(s) with the highest number of assists. Return player name, team, assists, league.
+        """
+        # Replace with your code
+        pass
+
+    def find_ironman(self):
+        """
+        Task 7: Find the player(s) with the highest number of minutes played. Return player name, team, minutes played, matches played.
+        """
+        # Replace with your code
+        pass
+
+    def find_efficient_striker(self):
+        """
+        Task 8: Find the forward(s) who is most efficent (most goals per minutes played) and has played more than 1000 minutes. Return player name, team, goals, minutes played, goals per minute.
+        """
+        # Replace with your code
+        pass
+
+
+    def find_most_disciplined(self):
+        """
+        Task 9: Find the player(s) with the lowest number of yellow cards and red cards after playing for 90 minutes. The total minutes played should be more than 1000 minutes. Return player name, team, yellow cards, red cards, discipline score (cards per 90), position.
+        """
+        # Replace with your code
+        pass
+
+    def compare_leagues_attack(self):
+        """
+        Task 10: Compare the average number of goals scored by each league. Return a bar chart visualization and the average goals per 90 for each league.
+        """
+        # Replace with your code
+        pass
+
+    def compare_position_productivity(self):
+        """
+        Task 11: Compare the average number of goals scored and assists by each position.
+        Return a plot with two subplots and the data dictionary for the plots:
+          (1) Average G+A by Primary Position
+          (2) Average G+A by Primary Position per League
+        """
+        # Replace with your code
+        pass
+
+    def age_curve_analysis(self):
+        """
+        Task 12: Compare the player age vs Goal Contribution Rate. Return a scatter plot visualization with a trend line and data.
+        """
+        # Replace with your code
+        pass
+
+    def league_defensive_discipline(self):
+        """
+        Task 13: Compare the average number of yellow cards and red cards by each league for defense. Return a plot with two subplots and the data dictionary for the plots.
+        """
+        # Replace with your code
+        pass
+
+    def youth_vs_veteran(self):
+        """
+        Task 14:
+        Compare youth (<=21) vs veteran (>=32) performance across leagues.
+        One subplot per position group (excluding Goalkeepers).
+        """
+        # Replace with your code
+        pass
+
+    def data_quality_report(self):
+        """
+        Task 15: Generate a report on data quality.
+        """
+        # Replace with your code
+        pass
+
+    def handle_transfers(self):
+        """
+        Task 16: Identify players with multiple entries and aggregate. Strategy: Sum counting stats, weighted average for rate stats.
+        """
+        # Replace with your code
+        pass
+
+    def __drawRadarChart(self, ax, player_data, player_name, color, attributes, all_players_data=None):
+        """
+        Helper method: Draws a single radar chart polygon on given axes.
+        
+        Input:
+            ax: Matplotlib axes object (polar projection)
+            player_data: Dict or Series of attribute values
+            player_name: String for legend label
+            color: Color string for the polygon
+            attributes: List of attribute names (columns) to plot
+            all_players_data: DataFrame of all players for normalization context
+        """
+        # Replace with your code
+        pass
+
+    def compare_players_radar(self, player1_name, player2_name, attributes, 
+                             normalization='minmax', figsize=(10, 10), save_path=None):
+        """
+        Task 17: Compare two players using a radar chart across specified attributes.
+        
+        Input:
+            player1_name: String, exact name of first player (e.g., "Erling Haaland")
+            player2_name: String, exact name of second player (e.g., "Kylian Mbappé")
+            attributes: List of column names to compare (e.g., ['Gls', 'Ast', 'xG', 'xAG', 'Shots'])
+            normalization: 'minmax' (0-100 scale), 'raw' (actual values), or 'percentile' (league percentile)
+            figsize: Tuple for figure size
+            save_path: Optional path to save figure
+            
+        Output: Displays radar chart (and saves if path provided). Returns comparison DataFrame.
+        """
+        # Replace with your code
+        pass
+
+    def _aggregate_player_stats(self, player_df):
+        """Helper to sum stats for players with multiple rows (transfers)"""
+        # Replace with your code
+        pass
+    
+if __name__ == "__main__":
+    # Complete driver code to demonstrate functionality
+    #Task 1
+    analysis = EuropeanFootballAnalysis("Player_Stats.html")
+    raw = analysis.scrape()
+    print(raw.head())
+
+    #Task 2
+    clean = analysis.clean_data()
+    print(clean.head())
+    
+    #Task 3
+    print(analysis._extract_primary_position("MF,FW"), analysis._extract_primary_position("FWMF"), analysis._extract_primary_position("GK"), analysis._extract_primary_position(""))
+    
+    #Task 4
+    clean = analysis.add_derived_metrics()
+    print(clean.head())
+
+
