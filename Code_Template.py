@@ -275,8 +275,33 @@ class EuropeanFootballAnalysis:
         """
         Task 10: Compare the average number of goals scored by each league. Return a bar chart visualization and the average goals per 90 for each league.
         """
-        # Replace with your code
-        pass
+        df = self.cleaned_data
+        df = df[df["Min"] > 90] #Only keeps rows with at least 90 mins
+
+        avg_goals = df.groupby("League")["Gls/90"].mean().sort_values(ascending=False)
+
+        
+        grouped = df.groupby("League")
+        weighted = (grouped["Gls"].sum() / grouped["90s"].sum()).reindex(avg_goals.index) #Weighted check + total goals / totals 90s per league
+
+        fig, ax = plt.subplots(figsize=(9, 6))
+        bar_colors = [self.colors.get(league, "gray") for league in avg_goals.index] #Creating bar colors, default = gray
+
+        bars = ax.bar(avg_goals.index, avg_goals.values, color=bar_colors)
+        ax.bar_label(bars, fmt = "%.3f") #Print each bar's values on top
+        ax.set_title("Average Goals per 90 Minutes by League")
+        ax.set_xlabel("League")
+        ax.set_ylabel("Average Goals per 90")
+
+        plt.tight_layout()
+
+        data = {
+            "avg_goals_per_90": avg_goals.round(3).to_dict(),
+            "weighted_avg_goals_per_90": weighted.round(3).to_dict(),
+            "players_counted": grouped.size().reindex(avg_goals.index).to_dict() #Counts players per league, reindex keeps the same league order
+        }
+
+        return fig, data #Returned for driver can show
 
     def compare_position_productivity(self):
         """
@@ -285,15 +310,80 @@ class EuropeanFootballAnalysis:
           (1) Average G+A by Primary Position
           (2) Average G+A by Primary Position per League
         """
-        # Replace with your code
-        pass
+
+        df = self.cleaned_data
+        df = df[(df["Min"] >= 90) & (df["Primary_Position"] != "Unknown")] #Only keep rows with at least 90 mins and known positions
+
+        order = ["GK", "DF", "MF", "FW"] #Defense to attack order for plotting
+
+        overall = df.groupby("Primary_Position")["G+A"].mean().reindex(order)
+        by_league = (df.groupby(["Primary_Position", "League"])["G+A"].mean().unstack().reindex(order)) #Unstacks league to columns, reindex keeps the same position order
+
+        labels = [self.position_map[p] for p in order] #Sets labels to be in order of defense to attack
+
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6)) #Sets 1 row with 2 sets of axes
+
+        bars = ax1.bar(labels, overall.values, color = "gray")
+        ax1.bar_label(bars, fmt = "%.2f")
+        ax1.set_title("Average G+A by position")
+        ax1.set_xlabel("Position")
+        ax1.set_ylabel("Average G+A")
+
+        by_league.plot(kind="bar", ax=ax2, color=[self.colors.get(l, "gray") for l in by_league.columns])
+
+        ax2.set_xticklabels(labels, rotation = 0) #Swaps code for full names
+        ax2.set_title("Average G+A by position per league")
+        ax2.set_xlabel("Position")
+        ax2.set_ylabel("Average G+A")
+        ax2.legend(title="League")
+
+        plt.tight_layout()
+
+        data = {
+            "overall": overall.round(2).to_dict(),
+            "by_league": by_league.round(2).to_dict()
+        }
+
+        return fig, data #Returns for driver to show
 
     def age_curve_analysis(self):
         """
         Task 12: Compare the player age vs Goal Contribution Rate. Return a scatter plot visualization with a trend line and data.
         """
-        # Replace with your code
-        pass
+        df = self.cleaned_data
+        df = df[(df["Age"] > 0) & (df["Min"] >= 450)] #drop if age is not positive or minutes played is less than 450
+
+        x = df["Age"].to_numpy()
+        y = df["Goal_Contr_Rate"].to_numpy()
+
+        corr = np.corrcoef(x, y)[0, 1] #correlation coefficient returns a 2x2 matrix for x-y entry
+        slope, intercept = np.polyfit(x, y, 1) #y = mx + b
+        a, b, c = np.polyfit(x, y, 2) #y = ax^2 + bx + c
+        peak_age = -b / (2 * a) if a < 0 else None # Only exists if curve is downward facing
+
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.scatter(x, y, alpha=0.4, color="gray", label="Players") #Shows desity 
+
+        xs = np.linspace(x.min(), x.max(), 100) #Plots 100 points between min and max age for trend lines
+        ax.plot(xs, slope * xs + intercept, color="red", linewidth=2, label="Linear Trend")
+        ax.plot(xs, a * xs ** 2 + b * xs + c, color="green", linewidth=2, linestyle="--", label="Quadratic Trend")
+        
+        ax.set_title("Age vs Goal Contribution Rate (G+A per 90)")
+        ax.set_xlabel("Age")
+        ax.set_ylabel("Goal Contribution Rate (G+A per 90)")
+        ax.legend()
+
+        plt.tight_layout()
+
+        data = { #Converts numpy types to python types
+            "correlation": round(float(corr), 3),
+            "linear_slope": round(float(slope), 4),
+            "Linear_intercept": round(float(intercept), 4),
+            "peak_age_quadratic": None if peak_age is None else round(float(peak_age), 1),
+            "players_used": int(len(df))
+        }
+
+        return fig, data #Return for driver to show
 
     def league_defensive_discipline(self):
         """
@@ -396,4 +486,16 @@ if __name__ == "__main__":
     #Task 9
     print(analysis.find_most_disciplined())
 
+    #Task 10
+    fig10, task10_data = analysis.compare_leagues_attack()
+    print(task10_data)
 
+    #Task 11
+    fig11, task11_data = analysis.compare_position_productivity()
+    print(task11_data)
+
+    #Task 12
+    fig12, task12_data = analysis.age_curve_analysis()
+    print(task12_data)
+
+    plt.show() #Print Figures Tasks 10 - 12
