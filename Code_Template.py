@@ -205,37 +205,71 @@ class EuropeanFootballAnalysis:
         """
         Task 5: Find the player(s) with the highest number of goals. Return player name, team, goals, league.
         """
-        # Replace with your code
-        pass
+        
+        df = self.cleaned_data
+        # Highest goal total in the whole dataset (a single number)
+        max_goals = df["Gls"].max()
+        # Boolean filter: keeps every row where Gls equals the maximum.
+        # Using == instead of idxmax() means tied players will be included.
+        top_scorer = df[df["Gls"] == max_goals]
+        # Double brackets select several columns; reset_index renumbers the rows from 0. 
+        return top_scorer[["Player", "Squad", "Gls", "League"]].reset_index(drop=True)
+        
 
     def find_playmaker(self):
         """
         Task 6: Find the player(s) with the highest number of assists. Return player name, team, assists, league.
         """
-        # Replace with your code
-        pass
+        df = self.cleaned_data
+        # Highest assist total in the whole dataset (a single number)
+        max_assists = df["Ast"].max()
+        # Keep all players who reached that total (ties included)
+        top_playmakers = df[df["Ast"] == max_assists]
+        return top_playmakers[["Player", "Squad", "Ast", "League"]].reset_index(drop=True)
+    
 
     def find_ironman(self):
         """
         Task 7: Find the player(s) with the highest number of minutes played. Return player name, team, minutes played, matches played.
         """
-        # Replace with your code
-        pass
+        df = self.cleaned_data
+        # Most minutes played by any player in the dataset (a single number)
+        max_minutes = df["Min"].max()
+        # Several players can play every minute of a 38-game season, so we keep all players who reached that total (ties included)
+        ironmen = df[df["Min"] == max_minutes]
+        return ironmen[["Player", "Squad", "Min", "MP"]].reset_index(drop=True)
+    
 
     def find_efficient_striker(self):
         """
         Task 8: Find the forward(s) who is most efficent (most goals per minutes played) and has played more than 1000 minutes. Return player name, team, goals, minutes played, goals per minute.
         """
-        # Replace with your code
-        pass
+        df = self.cleaned_data
+        # Filter for forwards with more than 1000 minutes played 
+        # .copy() is used to avoid SettingWithCopyWarning when creating new columns in the filtered DataFrame
+        forwards = df[(df["Primary_Position"] == "FW") & (df["Min"] > 1000)].copy()
+        # Calculate goals per minute for each forward
+        forwards["Goals_per_Minute"] = forwards["Gls"] / forwards["Min"]
+        # Find the forward(s) with the highest goals per minute
+        max_efficiency = forwards["Goals_per_Minute"].max()
+        efficient_forwards = forwards[forwards["Goals_per_Minute"] == max_efficiency]
+        return efficient_forwards[["Player", "Squad", "Gls", "Min", "Goals_per_Minute"]].reset_index(drop=True)
 
 
     def find_most_disciplined(self):
         """
         Task 9: Find the player(s) with the lowest number of yellow cards and red cards after playing for 90 minutes. The total minutes played should be more than 1000 minutes. Return player name, team, yellow cards, red cards, discipline score (cards per 90), position.
         """
-        # Replace with your code
-        pass
+        df = self.cleaned_data
+        # Filter for players with more than 1000 minutes played
+        players = df[df["Min"] > 1000].copy()
+        # Calculate discipline score (cards per 90 minutes)
+        players["Discipline_Score"] = (players["CrdY"] + players["CrdR"] * 0.5) / players["90s"]
+        # Find the player(s) with the lowest discipline score
+        best = players[players["Discipline_Score"] == players["Discipline_Score"].min()]
+        # Sort the tied players by minutes, so those with the largest come first
+        best = best.sort_values(by="Min", ascending=False)
+        return best[["Player", "Squad", "CrdY", "CrdR", "Discipline_Score", "Primary_Position"]].reset_index(drop=True)
 
     def compare_leagues_attack(self):
         """
@@ -346,5 +380,20 @@ if __name__ == "__main__":
     #Task 4
     clean = analysis.add_derived_metrics()
     print(clean.head())
+
+    #Task 5
+    print(analysis.find_top_scorer())
+
+    #Task 6
+    print(analysis.find_playmaker())
+
+    #Task 7
+    print(analysis.find_ironman())
+
+    #Task 8
+    print(analysis.find_efficient_striker())
+
+    #Task 9
+    print(analysis.find_most_disciplined())
 
 
