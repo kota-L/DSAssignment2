@@ -385,21 +385,125 @@ class EuropeanFootballAnalysis:
 
         return fig, data #Return for driver to show
 
+
     def league_defensive_discipline(self):
         """
-        Task 13: Compare the average number of yellow cards and red cards by each league for defense. Return a plot with two subplots and the data dictionary for the plots.
+        Task 13: Compare the average number of yellow cards and red cards by each league for defense.
+        Return a plot with two subplots and the data dictionary for the plots.
+
+        Plan:
+        a. Filter the cleaned dataset for defenders (Primary_Position == 'DF') with at least 90 minutes played.
+        b. Group the data by 'League' and calculate the mean of 'CrdY' (Yellow Cards) and 'CrdR' (Red Cards), plus per-90 card rates.
+        c. Create two subplots: Subplot 1 with two grouped bars per league (Yellow vs Red cards), and Subplot 2 comparing cards per 90 minutes.
+        d. Return the figure and the dictionary containing the defensive discipline statistics.
         """
-        # Replace with your code
-        pass
+        df = self.cleaned_data
+        defenders = df[(df["Primary_Position"] == "DF") & (df["Min"] >= 90)].copy()
+
+        defenders["CrdY/90"] = defenders["CrdY"] / defenders["90s"]
+        defenders["CrdR/90"] = defenders["CrdR"] / defenders["90s"]
+
+        avg_cards = defenders.groupby("League")[["CrdY", "CrdR"]].mean().sort_values(by="CrdY", ascending=False)
+        avg_cards_per90 = defenders.groupby("League")[["CrdY/90", "CrdR/90"]].mean().reindex(avg_cards.index)
+
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+
+        x = np.arange(len(avg_cards.index))
+        width = 0.35
+
+        # Subplot 1: Two bars per league (Average Yellow Cards and Average Red Cards)
+        bars_y1 = ax1.bar(x - width / 2, avg_cards["CrdY"], width, label="Yellow Cards", color="#f1c40f")
+        bars_r1 = ax1.bar(x + width / 2, avg_cards["CrdR"], width, label="Red Cards", color="#e74c3c")
+        ax1.bar_label(bars_y1, fmt="%.2f", padding=2)
+        ax1.bar_label(bars_r1, fmt="%.2f", padding=2)
+        ax1.set_title("Average Yellow & Red Cards per Defender by League")
+        ax1.set_xlabel("League")
+        ax1.set_ylabel("Average Cards")
+        ax1.set_xticks(x)
+        ax1.set_xticklabels(avg_cards.index)
+        ax1.legend()
+
+        # Subplot 2: Two bars per league (Average Yellow & Red Cards per 90 mins)
+        bars_y2 = ax2.bar(x - width / 2, avg_cards_per90["CrdY/90"], width, label="Yellow Cards / 90", color="#f1c40f")
+        bars_r2 = ax2.bar(x + width / 2, avg_cards_per90["CrdR/90"], width, label="Red Cards / 90", color="#e74c3c")
+        ax2.bar_label(bars_y2, fmt="%.3f", padding=2)
+        ax2.bar_label(bars_r2, fmt="%.3f", padding=2)
+        ax2.set_title("Average Defensive Cards per 90 Minutes by League")
+        ax2.set_xlabel("League")
+        ax2.set_ylabel("Average Cards per 90")
+        ax2.set_xticks(x)
+        ax2.set_xticklabels(avg_cards_per90.index)
+        ax2.legend()
+
+        plt.tight_layout()
+
+        data = {
+            "avg_cards": avg_cards.round(3).to_dict(),
+            "avg_cards_per_90": avg_cards_per90.round(3).to_dict()
+        }
+
+        return fig, data
 
     def youth_vs_veteran(self):
         """
-        Task 14:
-        Compare youth (<=21) vs veteran (>=32) performance across leagues.
+        Task 14: Compare youth (<=21) vs veteran (>=32) performance across leagues.
         One subplot per position group (excluding Goalkeepers).
+
+        Plan:
+        a. Filter the dataset to exclude Goalkeepers ('GK') and 'Unknown' positions, keeping players with at least 90 minutes played.
+        b. Filter for Youth (0 < Age <= 21) and Veteran (Age >= 32) players and label them in a new 'Age_Group' column.
+        c. Assign a position-specific performance metric: Mins_Per_Game for Defenders (DF), Goal_Contr_Rate for Midfielders (MF), and Gls/90 for Forwards (FW).
+        d. Group by 'League' and 'Age_Group' for each position and plot a grouped bar chart on its respective subplot.
+        e. Return the figure and the dictionary of grouped performance results.
         """
-        # Replace with your code
-        pass
+        df = self.cleaned_data
+        df = df[(df["Min"] >= 90) & (df["Primary_Position"].isin(["DF", "MF", "FW"]))].copy()
+
+        youth_mask = (df["Age"] > 0) & (df["Age"] <= 21)
+        veteran_mask = df["Age"] >= 32
+        df = df[youth_mask | veteran_mask].copy()
+
+        df["Age_Group"] = np.where(df["Age"] <= 21, "Youth (<=21)", "Veteran (>=32)")
+
+        position_configs = [
+            ("DF", "Mins_Per_Game", "Defenders: Avg Minutes per Game"),
+            ("MF", "Goal_Contr_Rate", "Midfielders: Avg Goal Contr. Rate (G+A/90)"),
+            ("FW", "Gls/90", "Forwards: Avg Goals per 90")
+        ]
+
+        fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+        data = {}
+
+        age_order = ["Youth (<=21)", "Veteran (>=32)"]
+
+        for ax, (pos, metric, title) in zip(axes, position_configs):
+            pos_df = df[df["Primary_Position"] == pos]
+            grouped = (
+                pos_df.groupby(["League", "Age_Group"])[metric]
+                .mean()
+                .unstack()
+                .reindex(columns=age_order)
+                .fillna(0)
+            )
+
+            grouped.plot(kind="bar", ax=ax, color=["#3498db", "#e67e22"], width=0.7)
+            for container in ax.containers:
+                ax.bar_label(container, fmt="%.2f", fontsize=8, padding=2)
+
+            ax.set_title(title)
+            ax.set_xlabel("League")
+            ax.set_ylabel(metric)
+            ax.tick_params(axis="x", rotation=30)
+            if pos == "DF":
+                ax.legend(title="Age Group", fontsize=7.5, title_fontsize=7.5)
+            else:
+                ax.legend(title="Age Group")
+
+            data[pos] = grouped.round(3).to_dict()
+
+        plt.tight_layout()
+
+        return fig, data
 
     def data_quality_report(self):
         """
@@ -452,50 +556,56 @@ class EuropeanFootballAnalysis:
         """Helper to sum stats for players with multiple rows (transfers)"""
         # Replace with your code
         pass
-    
+
+
 if __name__ == "__main__":
-    # Complete driver code to demonstrate functionality
-    #Task 1
+    # Driver code to show output for the questions.
     analysis = EuropeanFootballAnalysis("Player_Stats.html")
     raw = analysis.scrape()
+    print("\nTask 1")
     print(raw.head())
 
-    #Task 2
     clean = analysis.clean_data()
+    print("\nTask 2 & 3")
     print(clean.head())
     
-    #Task 3
-    print(analysis._extract_primary_position("MF,FW"), analysis._extract_primary_position("FWMF"), analysis._extract_primary_position("GK"), analysis._extract_primary_position(""))
-    
-    #Task 4
     clean = analysis.add_derived_metrics()
+    print("\nTask 4")
     print(clean.head())
 
-    #Task 5
+    print("\nTask 5")
     print(analysis.find_top_scorer())
 
-    #Task 6
+    print("\nTask 6")
     print(analysis.find_playmaker())
 
-    #Task 7
+    print("\nTask 7")
     print(analysis.find_ironman())
 
-    #Task 8
+    print("\nTask 8")
     print(analysis.find_efficient_striker())
 
-    #Task 9
+    print("\nTask 9")
     print(analysis.find_most_disciplined())
 
-    #Task 10
     fig10, task10_data = analysis.compare_leagues_attack()
-    print(task10_data)
+    fig10.savefig("task10_leagues.png")
+    print("\nTask 10 saved as task10_leagues.png")
 
-    #Task 11
     fig11, task11_data = analysis.compare_position_productivity()
-    print(task11_data)
+    fig11.savefig("task11_positions.png")
+    print("\nTask 11 saved as task11_positions.png")
 
-    #Task 12
     fig12, task12_data = analysis.age_curve_analysis()
-    print(task12_data)
+    fig12.savefig("task12_age_curve.png")
+    print("\nTask 12 saved as task12_age_curve.png")
 
-    plt.show() #Print Figures Tasks 10 - 12
+    fig13, task13_data = analysis.league_defensive_discipline()
+    fig13.savefig("task13_defensive_discipline.png")
+    print("\nTask 13 saved as task13_defensive_discipline.png")
+
+    fig14, task14_data = analysis.youth_vs_veteran()
+    fig14.savefig("task14_youth_vs_veteran.png")
+    print("\nTask 14 saved as task14_youth_vs_veteran.png")
+
+    plt.show()
