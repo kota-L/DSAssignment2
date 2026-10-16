@@ -85,17 +85,25 @@ class EuropeanFootballAnalysis:
       }
 
     def scrape(self):
-        """
-        Task 1: Read data from the html file and extraction table.
-        populates self.raw_data as a pandas DataFrame.
-        """
-        # Replace with your code
+        
         # Task Number 1
-    
+        """
+        Task Number 1 - Kanaan Gute
+        Plan
+        a. open the HTML file and read() all the content in a string
+        b. create the beautifulsoup object from the HTML_content using the lxml parser
+        c. using the id ("stats_standard") find the standard stats table
+        d. get all the column names from the last header row
+        e. add "/90" to the columns that have per 90 minutes after the CrdR column, making every column distinct
+        f. loop through each row in the table and append all content that is a td and th element
+        g. build a dataframe from the rows and column names and store it into self.raw_data
+        
+        
+        """
 
         with open(self.file, "r", encoding="utf-8") as football_file:
             html_content = football_file.read()
-        soup = BeautifulSoup(html_content, "html.parser")
+        soup = BeautifulSoup(html_content, "lxml")
         table = soup.find("table", id="stats_standard")
         header_rows = table.find("thead").find_all("tr")
     
@@ -123,13 +131,22 @@ class EuropeanFootballAnalysis:
 
     def clean_data(self):
         """
-        Task 2 & 3: Clean data.
-        - Remove special characters from data
-        - Convert columns with commas to numeric data
-        - Parse Nation: extract 3-letter code from flag images or text
-        - Parse Position: extract primary position and add a new column to data
-        - Convert Columns to numbers based on the type of data
-        - Populates self.cleaned_data as a pandas DataFrame.
+        Task 2 & 3: Clean data - Kanaan Gute
+        
+        Plan
+        a. Make a copy of self.raw_data to keep the original as is
+        b. remove the repeated header rows where Rk is "Rk" to avoid header rows being cleaned accidentally
+        c. remove all '*' markers and unnecessary spaces for each column
+        d. remove all the commas from min
+        e. turn all empty cells into NaN
+        f. convert the number columns to numbers, and if they cant be converted, they will be turned into NaN, then 0
+        g. convert min into an int
+        h. fill any missing text with unknown
+        i. create a new Nations column from the last 3 letters of Nation 
+        j. create a new League column by removing the lowercase country code from Comp
+        k. create a new Primary_Position column using _extract_primary_position
+        l. store the result in self.cleaned_data
+        
         """
         # Task Number 2 and 3
         df = self.raw_data.copy()
@@ -168,6 +185,11 @@ class EuropeanFootballAnalysis:
     def _extract_primary_position(self, pos_str):
         """
         Helper for Task 3: Extract primary position from codes like 'FWMF' or 'DF,MF'
+        Task 3 - Kanaan Gute
+        a. if the value isnt text, then return unknown
+        b. if the value has a comma, then strip and take the part before the comma
+        c. otherwise, just take the first 2 letters
+        d. if the result is one of the positions, then return it, otherwise return unknown
         """
         # Task Number 3
         if type(pos_str) != str:
@@ -186,7 +208,13 @@ class EuropeanFootballAnalysis:
 
     def add_derived_metrics(self):
         """
-        Task 4: Add Minutes_per_Game, and Goal_Contribution_Rate. The derived metrics should be added as new columns to self.cleaned_data.
+        Task 4 - Kanaan Gute: Add Minutes_per_Game, and Goal_Contribution_Rate. The derived metrics should be added as new columns to self.cleaned_data.
+        Plan
+        a. Get self.cleaned_data from task number 2
+        b. create a new Mins_Per_Game column by dividing minutes played (Min) by matches played (MP)
+        c. create a new Goal_Contr_Rate by dividing goals plus assists (G+A) by the number of 90 minutes games played (90s)
+        d. Replace infinity values caused by divide by 0 with NaN, then fill NaN with 0 in both new columns
+        e. Store the result back into self.cleaned_data
         """
         # Task Number 4
         df = self.cleaned_data
