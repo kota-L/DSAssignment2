@@ -264,7 +264,7 @@ class EuropeanFootballAnalysis:
         # Filter for players with more than 1000 minutes played
         players = df[df["Min"] > 1000].copy()
         # Calculate discipline score (cards per 90 minutes)
-        players["Discipline_Score"] = (players["CrdY"] + players["CrdR"] * 0.5) / players["90s"]
+        players["Discipline_Score"] = (players["CrdR"] + players["CrdY"] * 0.5) / players["90s"]
         # Find the player(s) with the lowest discipline score
         best = players[players["Discipline_Score"] == players["Discipline_Score"].min()]
         # Sort the tied players by minutes, so those with the largest come first
@@ -388,14 +388,12 @@ class EuropeanFootballAnalysis:
 
     def league_defensive_discipline(self):
         """
-        Task 13: Compare the average number of yellow cards and red cards by each league for defense.
-        Return a plot with two subplots and the data dictionary for the plots.
-
-        Plan:
-        a. Filter the cleaned dataset for defenders (Primary_Position == 'DF') with at least 90 minutes played.
-        b. Group the data by 'League' and calculate the mean of 'CrdY' (Yellow Cards) and 'CrdR' (Red Cards), plus per-90 card rates.
-        c. Create two subplots: Subplot 1 with two grouped bars per league (Yellow vs Red cards), and Subplot 2 comparing cards per 90 minutes.
-        d. Return the figure and the dictionary containing the defensive discipline statistics.
+        Task 13
+        Plan: 
+        a. Filter the cleaned dataset for defenders Primary_Position == 'DF' with at > 90 minutes played time.
+        b. Group the data by each league and calculate the mean of CrdY (yellow cards) and 'CrdR' (red cards) and per 90 card rates.
+        c. Create two subplots, subplot 1 with two grouped bars per league yellow vs red cards and subplot 2 comparing cards per 90 mins.
+        d. Return the figure and the dictionary containing the defense statistics.
         """
         df = self.cleaned_data
         defenders = df[(df["Primary_Position"] == "DF") & (df["Min"] >= 90)].copy()
@@ -442,19 +440,18 @@ class EuropeanFootballAnalysis:
             "avg_cards_per_90": avg_cards_per90.round(3).to_dict()
         }
 
-        return fig, data
+        return fig, data    
 
     def youth_vs_veteran(self):
         """
-        Task 14: Compare youth (<=21) vs veteran (>=32) performance across leagues.
-        One subplot per position group (excluding Goalkeepers).
+        Task 14
 
         Plan:
-        a. Filter the dataset to exclude Goalkeepers ('GK') and 'Unknown' positions, keeping players with at least 90 minutes played.
-        b. Filter for Youth (0 < Age <= 21) and Veteran (Age >= 32) players and label them in a new 'Age_Group' column.
-        c. Assign a position-specific performance metric: Mins_Per_Game for Defenders (DF), Goal_Contr_Rate for Midfielders (MF), and Gls/90 for Forwards (FW).
-        d. Group by 'League' and 'Age_Group' for each position and plot a grouped bar chart on its respective subplot.
-        e. Return the figure and the dictionary of grouped performance results.
+        a. Filter the dataset to ignore goalkeepers 'GK' and 'Unknown' positions and keep players with >= 90 minutes played.
+        b. Filter for Youth 0 < Age <= 21 and veteran Age >= 32 players and label them in a new 'Age_Group' column.
+        c. Assign a position performance metric. Mins_Per_Game for defense DF, Goal_Contr_Rate for Midfielders MF and Gls/90 for forwards FW.
+        d. Group by League and Age_Group for each position and plot a grouped bar chart on each subplot.
+        e. Return the figure and the dictionary of the grouped performace for each position.
         """
         df = self.cleaned_data
         df = df[(df["Min"] >= 90) & (df["Primary_Position"].isin(["DF", "MF", "FW"]))].copy()
@@ -567,6 +564,7 @@ if __name__ == "__main__":
 
     clean = analysis.clean_data()
     print("\nTask 2 & 3")
+    print(clean["Primary_Position"].value_counts())
     print(clean.head())
     
     clean = analysis.add_derived_metrics()
@@ -591,21 +589,26 @@ if __name__ == "__main__":
     fig10, task10_data = analysis.compare_leagues_attack()
     fig10.savefig("task10_leagues.png")
     print("\nTask 10 saved as task10_leagues.png")
+    print(task10_data)
 
     fig11, task11_data = analysis.compare_position_productivity()
     fig11.savefig("task11_positions.png")
     print("\nTask 11 saved as task11_positions.png")
+    print(task11_data)
 
     fig12, task12_data = analysis.age_curve_analysis()
     fig12.savefig("task12_age_curve.png")
     print("\nTask 12 saved as task12_age_curve.png")
+    print(task12_data)
 
     fig13, task13_data = analysis.league_defensive_discipline()
     fig13.savefig("task13_defensive_discipline.png")
     print("\nTask 13 saved as task13_defensive_discipline.png")
+    print(task13_data)
 
     fig14, task14_data = analysis.youth_vs_veteran()
     fig14.savefig("task14_youth_vs_veteran.png")
     print("\nTask 14 saved as task14_youth_vs_veteran.png")
+    print(task14_data)
 
     plt.show()
