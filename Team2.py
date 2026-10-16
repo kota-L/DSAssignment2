@@ -103,7 +103,7 @@ class EuropeanFootballAnalysis:
 
         with open(self.file, "r", encoding="utf-8") as football_file:
             html_content = football_file.read()
-        soup = BeautifulSoup(html_content, "lxml")
+        soup = BeautifulSoup(html_content, "html.parser")
         table = soup.find("table", id="stats_standard")
         header_rows = table.find("thead").find_all("tr")
     
@@ -437,7 +437,7 @@ class EuropeanFootballAnalysis:
 
     def league_defensive_discipline(self):
         """
-        Task 13
+        Task 13 (Dakota Lahr)
         Plan: 
         a. Filter the cleaned dataset for defenders Primary_Position == 'DF' with at > 90 minutes played time.
         b. Group the data by each league and calculate the mean of CrdY (yellow cards) and 'CrdR' (red cards) and per 90 card rates.
@@ -493,7 +493,7 @@ class EuropeanFootballAnalysis:
 
     def youth_vs_veteran(self):
         """
-        Task 14
+        Task 14 (Dakota Lahr)
 
         Plan:
         a. Filter the dataset to ignore goalkeepers 'GK' and 'Unknown' positions and keep players with >= 90 minutes played.
