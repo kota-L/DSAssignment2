@@ -150,7 +150,7 @@ class EuropeanFootballAnalysis:
         for column in number_columns:
             df[column] = pd.to_numeric(df[column], errors="coerce")
             df[column] = df[column].fillna(0)
-        df["min"] = df["Min"].astype(int)
+        df["Min"] = df["Min"].astype(int)
         df = df.fillna("Unknown")
 
         df["Nations"] = df["Nation"].str[-3:]
@@ -172,8 +172,6 @@ class EuropeanFootballAnalysis:
         # Task Number 3
         if type(pos_str) != str:
             return "unknown"
-        
-        pos_str = pos_str.strip().upper()
 
         if "," in pos_str:
             first = pos_str.split(",")[0].strip()
