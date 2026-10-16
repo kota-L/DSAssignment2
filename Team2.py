@@ -271,7 +271,14 @@ class EuropeanFootballAnalysis:
 
     def compare_leagues_attack(self):
         """
-        Task 10: Compare the average number of goals scored by each league. Return a bar chart visualization and the average goals per 90 for each league.
+        Task 10 (Braden Thooft): Compare the average number of goals scored by each league. Return a bar chart visualization and the average goals per 90 for each league.
+            
+            Plan - 
+                a. Filter the cleaned dataset for players with at least 90 minutes played.
+                b. Group the data by league and calculate the average goals per 90 minute, then sort by league in descending order.
+                c. Calculate the weighted average goals per 90 minute for each league (total goals / total 90s played) as a check.
+                d. Create a bar chart with the average goals per 90 minute for each league, with the league colors defined in self.colors.
+                e. Return the figure and a dictionary containing the average goals per 90 minutes, the weighted average goals per 90 minutes, and the player count for each league.
         """
         df = self.cleaned_data
         df = df[df["Min"] > 90] #Only keeps rows with at least 90 mins
@@ -303,10 +310,18 @@ class EuropeanFootballAnalysis:
 
     def compare_position_productivity(self):
         """
-        Task 11: Compare the average number of goals scored and assists by each position.
+        Task 11 (Braden Thooft): Compare the average number of goals scored and assists by each position.
         Return a plot with two subplots and the data dictionary for the plots:
           (1) Average G+A by Primary Position
           (2) Average G+A by Primary Position per League
+
+          Plan - 
+            a. Filter the cleaned dataset for players with at least 90 minutes played and known positions.
+            b. Group the data by Primary Position and calculate the average G+A for each position.
+            c. Group the data by Primary Position and League, then calculate the average G+A for each combination.
+            d. Create a bar chart for the average G+A by Primary Position and a grouped bar chart for the average G+A by Primary Position per League.
+            e. Replace position codes with full names using self.position_map and set the colors for each league using self.colors.
+            f. Return the figure and a dictionary containing the average G+A by position and by league.
         """
 
         df = self.cleaned_data
@@ -346,7 +361,15 @@ class EuropeanFootballAnalysis:
 
     def age_curve_analysis(self):
         """
-        Task 12: Compare the player age vs Goal Contribution Rate. Return a scatter plot visualization with a trend line and data.
+        Task 12 (Braden Thooft): Compare the player age vs Goal Contribution Rate. Return a scatter plot visualization with a trend line and data.
+        
+            Plan - 
+                a. Filter the cleaned dataset for players with at least 450 minutes played and known age.
+                b. Take Age as x and Goal Contribution Rate (G+A per 90) as y and calculate the correlation coefficient, linear regression slope and intercept, and quadratic regression coefficients.
+                c. Calculate the peak age for the quadratic regression if it exists (downward facing curve).
+                d. Create a scatter plot of Age vs Goal Contribution Rate with a linear trend line and a quadratic trend line.
+                e. Return the figure and a dictionary containing the correlation coefficient, linear regression slope, players used, peak player age, and intercept.
+
         """
         df = self.cleaned_data
         df = df[(df["Age"] > 0) & (df["Min"] >= 450)] #drop if age is not positive or minutes played is less than 450
@@ -376,7 +399,7 @@ class EuropeanFootballAnalysis:
         data = { #Converts numpy types to python types
             "correlation": round(float(corr), 3),
             "linear_slope": round(float(slope), 4),
-            "Linear_intercept": round(float(intercept), 4),
+            "linear_intercept": round(float(intercept), 4),
             "peak_age_quadratic": None if peak_age is None else round(float(peak_age), 1),
             "players_used": int(len(df))
         }
